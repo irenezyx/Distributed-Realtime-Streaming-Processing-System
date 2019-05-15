@@ -43,7 +43,7 @@ python sdfs_interface.py get frequency fre
 ```
 
 ### Print a Machine's Membership List
-MP2Log onto that machine. Run the file  [*command.py*](command.py) with leave instruction *"p"* and specifies the value to be *"m"*:
+Log onto that machine. Run the file  [*command.py*](command.py) with leave instruction *"p"* and specifies the value to be *"m"*:
 ```
 python command.py {\"p\":\"m\"}
 ```
