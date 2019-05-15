@@ -1,6 +1,6 @@
-# CS 425 MP3 - Simple Distributed File System
+# Simple Distributed File System like HDFS
 
-This project builds build a Simple Distributed File System (SDFS), which is a simplified version of HDFS.
+This project include building a Simple Distributed File System (SDFS), which is a simplified version of HDFS.
 
 ## Usage
 
