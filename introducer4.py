@@ -15,7 +15,7 @@ class introducer:
         self.message_list = deque([]) # a list consist of ID+operation(join/fail/leave)
         self.message_list_mutex = threading.Lock()
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(("0.0.0.0", 7010))
+        sock.bind(("0.0.0.0", 10003))
         self.listener_sock = sock
         logging.basicConfig(filename='vm.log', level=logging.INFO)
 
@@ -77,7 +77,7 @@ class introducer:
                     contact_ip = self.membership_list[index].split('#')[0]
                     try:
                         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        sock.connect((contact_ip, 7003))
+                        sock.connect((contact_ip, 10003))
                         sock.send(json.dumps(message).encode())
                         sock.close() 
                         num_to_sent -=1

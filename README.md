@@ -1,13 +1,13 @@
-# Distributed Realtime Streaming Processing System
+# CS 425 MP4 - Crane
 
-This project builds Crane, a real-time stream processing system whose structure is adapted from Storme and runs faster than Spark Streaming on small data sets. It supports fundamental functions like bolts filter and transform. 
+This project builds Crane, a real-time stream processing system that is faster than Spark Streaming on small data sets. It supports bolts filter and transform. 
 
-This project includes a distributed system debugger, distributed group membership service and a distributed file system like HDFS.
+MP1 was used to debug this project. MP2 provides distributed group membership service. MP3 provides distributed file system(SDFS).
 
 ## Usage
 
 ### Start SDFS
-Refer to [SDFS README.md](SDFS_README.md).
+Refer to [MP3 README.md](https://gitlab-beta.engr.illinois.edu/jyuan18/cs_425_mp3/blob/master/README.md).
 
 ### Start Standby Nimbus
 Log onto the machine for it. Here we assign VM1 for standby nimbus. Run the file [*standby_nimbus.py*](standby_nimbus.py)

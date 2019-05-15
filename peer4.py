@@ -26,20 +26,20 @@ class Peer:
         sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         #print(self.id)
-        sock1.bind((self.id, 7004))
-        sock.bind((self.id, 7005))
+        sock1.bind((self.id, 10004))
+        sock.bind((self.id, 10005))
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock2.bind(("0.0.0.0", 7003))
+        sock2.bind(("0.0.0.0", 10003))
         sock.settimeout(0.8)
         self.ack_receiving_sock = sock # socket for receiving ack from node it pinged
         self.ping_response_sock = sock1 # socket for
         self.listener_sock = sock2 #listen to join ,fail and other command messages
         self.extra_check = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        self.extra_check.bind(("0.0.0.0",5004))
+        self.extra_check.bind(("0.0.0.0",9004))
         self.extra_check_receive = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        self.extra_check_receive.bind(("0.0.0.0",5005))
+        self.extra_check_receive.bind(("0.0.0.0",9005))
         self.extra_check_receive.settimeout(0.8)
 
         logging.basicConfig(filename='vm.log', level=logging.INFO)
@@ -75,7 +75,7 @@ class Peer:
                         break
 
     #listen for any command, fail, leave and other machine's id
-    def listen_on_7003(self):
+    def listen_on_10003(self):
         max_data = 8192
         while True:
             message = ""
@@ -89,14 +89,13 @@ class Peer:
             self.message_handler(message)
 
     # listen for any command,fail, leave and other machine's id
-    def start(self):##silenced heartbeat
-
-        #threading.Thread(target=self.check_heartbeat).start()
+    def start(self):
+        threading.Thread(target=self.check_heartbeat).start()
         threading.Thread(target=self.message_list_maintainer).start()
-        #threading.Thread(target=self.listen_ping_and_reply,args=(self.ping_response_sock, 7005)).start()
-        #threading.Thread(target=self.listen_ping_and_reply, args=(self.extra_check,5005)).start()
+        threading.Thread(target=self.listen_ping_and_reply,args=(self.ping_response_sock, 10005)).start()
+        threading.Thread(target=self.listen_ping_and_reply, args=(self.extra_check,9005)).start()
         self.join()
-        threading.Thread(target=self.listen_on_7003).start()
+        threading.Thread(target=self.listen_on_10003).start()
 
     #spread received message,each time send message to the first element in ping list,
     # which is the member after itself in the membership list, and other 2 random nodes.
@@ -104,7 +103,7 @@ class Peer:
         ttl = message["t"]#number of times to spread it, actually is t in epidemic gossip style
         if ttl > 0:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.connect((self.introducer, 7010))
+            sock.connect((self.introducer, 10003))
             sock.send(json.dumps(message).encode())
             sock.close()
         while ttl > 0:
@@ -138,7 +137,7 @@ class Peer:
                         contact_ip = self.member_ship_list[index].split("#")[0]
                         self.member_ship_list_mutex.release()
                         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        sock.connect((contact_ip, 7003))
+                        sock.connect((contact_ip, 10003))
                         message["t"] = ttl
                         sock.send(json.dumps(message).encode())
                         sock.close()
@@ -201,7 +200,7 @@ class Peer:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
                 try:
-                    sock.connect((ip, 7004))
+                    sock.connect((ip, 10004))
                     sock.send(self.id.split("#")[0].encode())#send its own ip to the node on ping list, so they can reply back.
 
                     #sock1.send(self.id.split("#")[0].encode())
@@ -220,17 +219,17 @@ class Peer:
                         message = {"f": ip, "t": adjustable_num_neighbor}
                         self.message_handler(json.dumps(message))
             #after pinging, starts receiving messages
-            pinged_list_7005 = [ip for ip in pinged_list]
-            pinged_list_5005 = pinged_list_7005
+            pinged_list_10005 = [ip for ip in pinged_list]
+            pinged_list_9005 = pinged_list_10005
 
-            if not len(pinged_list_7005) == 0:
-                for ip in pinged_list_5005:
+            if not len(pinged_list_10005) == 0:
+                for ip in pinged_list_9005:
                     sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    sock1.connect((ip, 5004))
+                    sock1.connect((ip, 9004))
                     sock1.send(self.id.split("#")[0].encode())
-                    self.receiving_ack(pinged_list_5005, time.time(), self.extra_check_receive)
-                self.receiving_ack(pinged_list_7005, time.time(), self.ack_receiving_sock)
-            for ip in list(set(pinged_list_5005) & set(pinged_list_7005)):
+                    self.receiving_ack(pinged_list_9005, time.time(), self.extra_check_receive)
+                self.receiving_ack(pinged_list_10005, time.time(), self.ack_receiving_sock)
+            for ip in list(set(pinged_list_9005) & set(pinged_list_10005)):
                 adjustable_num_neighbor = 6
                 message = {"f": ip, "t": adjustable_num_neighbor}
                 self.message_handler(json.dumps(message))
@@ -262,7 +261,7 @@ class Peer:
         if "j" in message or "i" in message:
             if "j" in message:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                host_address = (id.split("#")[0], 7003)
+                host_address = (id.split("#")[0], 10003)
                 sock.connect(host_address)
                 reply = json.dumps({"i": self.id})
                 for i in range(0, 5):
@@ -329,7 +328,7 @@ class Peer:
     #initiate a join and send message to introducer
     def join(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.connect((self.introducer, 7010))
+        sock.connect((self.introducer, 10003))
         now = str(time.time())
         logging.info(self.id + "join initiated at " + str(now))
         message = json.dumps({"j": self.id + '#'+str(now),"t": 6})

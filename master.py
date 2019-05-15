@@ -28,6 +28,19 @@ class master:
         self.seq_dict = {0: 'init'} # records seq->client_connection
         self.ack_dict = {0: [0]} # seq -> expected_from_[ips]
         
+        self.hostname_map = {
+                'slave09': 'fa18-cs425-g26-01.cs.illinois.edu',
+                'slave08': 'fa18-cs425-g26-02.cs.illinois.edu',
+                'slave07': 'fa18-cs425-g26-03.cs.illinois.edu',
+                'slave06': 'fa18-cs425-g26-04.cs.illinois.edu',
+                'slave05': 'fa18-cs425-g26-05.cs.illinois.edu',
+                'slave04': 'fa18-cs425-g26-06.cs.illinois.edu',
+                'slave03': 'fa18-cs425-g26-07.cs.illinois.edu',
+                'slave02': 'fa18-cs425-g26-08.cs.illinois.edu',
+                'slave01': 'fa18-cs425-g26-09.cs.illinois.edu',
+                'master': 'fa18-cs425-g26-10.cs.illinois.edu'
+                }
+        
         # open a thread for replica recovery
         threading.Thread(target=self.check_replica_remove).start()
         
@@ -48,7 +61,7 @@ class master:
                 continue
             list_new = self.copy_membership_list()
             test_start = time.time()
-            print('len changed from {2} to {3};   membership list from {0} \n to {1}'.format(list_old, list_new, len_old, len_new))
+            #print('len changed from {2} to {3};   membership list from {0} \n to {1}'.format(list_old, list_new, len_old, len_new))
             failed_mems = []
             for mem in list_old:
                 if mem not in list_new:
@@ -68,9 +81,9 @@ class master:
     # all files finished, then del addr_file[failed_node]
     def recover_failed_replicas(self, failed_mems, test_start):
         for failed_mem in failed_mems:
-            print('{0} failed'.format(failed_mem))
+            #print('{0} failed'.format(failed_mem))
             if failed_mem not in self.addr_file:
-                print('no file stored on {0}'.format(failed_mem))
+                #print('no file stored on {0}'.format(failed_mem))
                 continue
             for sdfs_filename in self.addr_file[failed_mem]:
                 #print('handling {0}'.format(sdfs_filename))
@@ -88,14 +101,14 @@ class master:
                             pass
                     cot += 1'''
                 while True:
-                    print('trying recover {0} which used to locate at {1}'.format(sdfs_filename, failed_mem))
+                    #print('trying recover {0} which used to locate at {1}'.format(sdfs_filename, failed_mem))
                     while True:
                         new_ip = random.sample(self.membership_list, 1)[0].split('#')[0]
                         if new_ip not in chosen_addrs:
                             break
                     new_message['new'] = new_ip
                     new_message['ips'] = [new_ip] + chosen_addrs
-                    print('new chosen replica addr: ' + str(new_ip))
+                    #print('new chosen replica addr: ' + str(new_ip))
                     '''count = 0
                     while count<3:
                         if count == 2:
@@ -109,14 +122,15 @@ class master:
                             sock.connect((exec_addr, 2333))
                             sock.send((json.dumps(new_message) + self.padding).encode())
                             sock.close()
-                            print('in recovery, master sent <{0}>    to {1}'.format(new_message, exec_addr))
+                            #print('in recovery, master sent <{0}>    to {1}'.format(new_message, exec_addr))
                             break
                         except Exception as e:
                             #print(e)
+
                             print('failed to send instr \'replicate {1}\' to old addr {0}'.format(exec_addr, sdfs_filename))
                             #while True:
                             #    pass
-                    print('finish chosen exec_node: {0}'.format(exec_addr))
+                    #print('finish chosen exec_node: {0}'.format(exec_addr))
                     flag = False
                     self.ack_dict[my_seq] = [new_ip, exec_addr] # waiting ack from new replica addr or exec_node, if any one replies then good!
                     #start = time.time()
@@ -130,10 +144,10 @@ class master:
                             break
                         membership_copy = self.copy_membership_list()
                         if new_ip not in membership_copy and exec_addr not in membership_copy:
-                            print('new_ip ({0}) and exec_node ({1}) both failed'.format(new_ip, exec_addr))
+                            #print('new_ip ({0}) and exec_node ({1}) both failed'.format(new_ip, exec_addr))
                             break
                         '''if time.time() - start > 100:
-                            print('replication timeout')
+                            #print('replication timeout')
                             #while True:
                             #    pass
                             break'''
@@ -157,12 +171,12 @@ class master:
                                 sock.close()
                             except:
                                 print('tring to send {0} to {1} and find it failed, ignore'.format(updated_message, chosen_addr))
-                        print('finished send updated message <{0}> to <{1}>'.format(updated_message, chosen_addrs))
+                        #print('finished send updated message <{0}> to <{1}>'.format(updated_message, chosen_addrs))
                         break
                 self.file_addr[sdfs_filename][1] = True
             del self.addr_file[failed_mem]
-            test_time = time.time() - test_start
-            print('re replication time for failed mem {0} is {1}'.format(failed_mem, test_time))
+            #test_time = time.time() - test_start
+            #print('re replication time for failed mem {0} is {1}'.format(failed_mem, test_time))
     
     def check_writing_status(self, sdfs_filename):
         '''if sdfs_filename not in self.file_addr: # no such file, shouldn't happen
@@ -206,6 +220,8 @@ class master:
                 continue
             
             client_address = socket.gethostbyaddr(client_address[0])[0]
+            if client_address in self.hostname_map:
+                client_address = self.hostname_map[client_address]
 
             #print('master received message: {0}, from addr: {1}, ack: {2}'.format(message, client_address, ack))
             
@@ -216,31 +232,31 @@ class master:
                 self.message_handler(message, client_address, connection)
         
     def ack_handler(self, message, client_address):
-        #print('start ack handler for message: {0}'.format(message))
+        #print('start ack handler for message: {0} from {1}'.format(message, client_address))
         op = message['op']
         if 'op' not in message or op != 'ack':
             return
 
         op_seq = message['seq']
         if op_seq not in self.ack_dict:
-            print('this op_seq {0} has finished'.format(op_seq))
+            #print('this op_seq {0} has finished'.format(op_seq))
             return
         
         #print('It\' an ack, now op_seq: {0}, self.ack_dict: {1}, self.seq_dict: {2}'.format(op_seq, self.ack_dict, self.seq_dict))
-            
+        
         if client_address not in self.ack_dict[op_seq]:
-            print('seems that node {0} has already send master ack of op_seq {1}'.format(client_address, op_seq))
+            #print('seems that node {0} has already send master ack of op_seq {1}'.format(client_address, op_seq))
             return
         
         if op_seq not in self.seq_dict: # this ack is for recovery
-            print('recovery seq {0} received ack from {1} so assumed recovery finished.'.format(op_seq, client_address))
+            #print('recovery seq {0} received ack from {1} so assumed recovery finished.'.format(op_seq, client_address))
             self.ack_dict[op_seq] = []
             #print('finsh recover ack_handler for message < {0} >, now ack_dict: {1},  now seq_dict: {2}'.format(message, self.ack_dict, self.seq_dict))
             return
         
         self.ack_dict[op_seq].remove(client_address)
             
-        #print('self.ack_dict: {0}'.format(self.ack_dict))        
+        # #print('self.ack_dict: {0}'.format(self.ack_dict))        
         
         if self.ack_dict[op_seq] == []:
             # reply client with ack
@@ -252,7 +268,7 @@ class master:
                 pass
             del self.ack_dict[op_seq]
             del self.seq_dict[op_seq]
-            print('master replied ack to client for op_seq {0}'.format(op_seq))
+            #print('master replied ack to client for op_seq {0}'.format(op_seq))
         
         #print('finsh put ack_handler for message < {0} >, now ack_dict: {1},  now seq_dict: {2}'.format(message, self.ack_dict, self.seq_dict))
     
@@ -272,7 +288,7 @@ class master:
                 2. Wait for acks from the chosen ips.
                 3. If get all 3 acks, reply to client with 'ack'.
             '''
-            if op == 'put':
+            if op == 'put' or op == 'append':
                 # check if the file is still being written
                 w_finished = self.wait_writing_finished(sdfs_filename, 5)
                 if w_finished == 1: # being written
@@ -281,7 +297,7 @@ class master:
                         connection.send(json.dumps(message).encode())
                     except:
                         print('client fails, ignore')
-                    print('master reject putting into a being written file')
+                    #print('master reject putting into a being written file')
                     return
                 
                 # choose 4 ips from membership list
@@ -289,19 +305,21 @@ class master:
                 if w_finished == 0: # has been written
                     self.file_addr[sdfs_filename][1] = False
                     chosen_addrs = self.file_addr[sdfs_filename][0]
-                else: # hasn't been written
+                else: # has never been written
                     if self.occupied > 8 and len(self.membership_list) > 4:
-                        chosen_indexes = random.sample(range(1, len(self.membership_list)), 4)
+                        chosen_indexes = random.sample(range(1, len(self.membership_list)), 1)
                         chosen_addrs = [self.membership_list[i] for i in chosen_indexes]
                     else:
-                        chosen_addrs = random.sample(self.membership_list, min(4, len(self.membership_list)))
+                        chosen_addrs = random.sample(self.membership_list, min(1, len(self.membership_list)))
                     for i in range(len(chosen_addrs)):
                         chosen_addrs[i] = chosen_addrs[i].split('#')[0]
-                    
-                # update expected ack list
-                left_ips = [chosen_addrs[i] for i in range(0, len(chosen_addrs))] # 4 ips
-                self.ack_dict[self.seq] = left_ips
-                self.seq_dict[self.seq] = connection
+                
+                if op == 'put':
+                    # update expected ack list
+                    left_ips = [chosen_addrs[i] for i in range(0, len(chosen_addrs))] # 4 ips
+                    self.ack_dict[self.seq] = left_ips
+                    self.seq_dict[self.seq] = connection
+                    # #print('wait to ack: {0}, {1}'.format(self.ack_dict[self.seq], self.seq_dict[self.seq]))
                 
                 # reply to client with all replica addr list
                 # message format: 
@@ -314,7 +332,7 @@ class master:
                 try:
                     connection.send(json.dumps(message).encode())
                 except:
-                    print('client fails, ignore')
+                    #print('client fails, ignore')
                     return
                 
                 self.file_addr[sdfs_filename] = [chosen_addrs, True]
@@ -332,6 +350,8 @@ class master:
             #     {op:get-versions  s:sdfsfilename  num_versions:#  l:localfilename}
             elif op == 'get' or op == 'get-versions':
                 # check if being written or no such file
+                #print('self.file_addr:{0}'.format(self.file_addr))
+                #print('sdfsfilename: {0}'.format(sdfs_filename))
                 w_finished = self.wait_writing_finished(sdfs_filename, 10)
                 if w_finished == 2:
                     message['failed'] = 'no such file'
@@ -357,7 +377,7 @@ class master:
                 try:
                     connection.send(json.dumps(message).encode())
                 except:
-                    print('client fails, ignore')
+                    #print('client fails, ignore')
                     return
                 #print('master received a get instr and send message: {0}'.format(message))
                 
@@ -366,7 +386,7 @@ class master:
             # 1. send del info to replica addr: {op:del, s:sdfsfilename}
             # 2. ack to client: {op:ack, seq: op_seq}
             elif op == 'del':
-                print('del...')
+                #print('del...')
                 # check if the file is still being written
                 w_finished = self.wait_writing_finished(sdfs_filename, 10)
                 if w_finished == 2:
@@ -381,7 +401,7 @@ class master:
                         sock.connect((addr, 2333))
                         sock.send(new_message)
                         sock.close()
-                        print('master sent message < {0} > to addr <{1}>.'.format(new_message, addr))
+                        #print('master sent message < {0} > to addr <{1}>.'.format(new_message, addr))
                     message = {'op': 'ack', 'seq': self.seq}  
                 try:
                     connection.send(json.dumps(message).encode())
@@ -389,7 +409,7 @@ class master:
                     print('client fails, ignore')
                 if w_finished != 2:
                     del self.file_addr[sdfs_filename]  
-                print('after del <{0}>, master send message: {1}'.format(sdfs_filename, message))
+                #print('after del <{0}>, master send message: {1}'.format(sdfs_filename, message))
  
             # ls: {op:ls s:sdfsfilename}
             # 1. not exist: {op:ls s:sdfsfilename failed:nosuchfile}
@@ -409,5 +429,3 @@ class master:
                     
             else:
                 print('master: none of my business')
-                           
-

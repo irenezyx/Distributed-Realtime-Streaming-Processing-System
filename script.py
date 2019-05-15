@@ -68,17 +68,23 @@ def kill_server():
 
             #find the process listening on port 7002, which is server, and kills it
             for line in lines:
-                if line.count(":7003") == 1 :
+                if line.count(":8010") == 1 :
                     line = line.split(" ")
                     for i in line:
                         if(i.count("/python") == 1):
                             pid = i.split("/")[0]
+
+            try:
+                ssh.exec_command("kill -9 " + pid)
+            except:
+                pass
             for line in lines:
-                if line.count(":2333") == 1 :
+                if line.count(":10003") == 1 :
                     line = line.split(" ")
                     for i in line:
                         if(i.count("/python") == 1):
                             pid = i.split("/")[0]
+
             try:
                 ssh.exec_command("kill -9 " + pid)
             except:
@@ -142,14 +148,66 @@ def combine():
                     pass
             except:
                 pass
+def start_sdfs():
+    with open("ips.txt", 'r') as file:
+        for line in file:
+            ip = line.split(":")[0]
+
+            #if ip == "fa18-cs425-g26-01.cs.illinois.edu":
+            #    continue
+            try:
+                # ssh into servers
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(ip, username="yixinz6", password="Zyyy9-9-")
+                ssh.exec_command("cd ~/mp4/;python SDFS_Node.py &")
+            except Exception as e:
+                print(ip)
+                print(e)
+                print("error!")
+def kill_sdfs():
+    with open("ips.txt", 'r') as file:
+        for line in file:
+            # ssh into servers
+            ip = line.split(":")[0]
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(ip, username="yixinz6", password="Zyyy9-9-")
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("netstat -tulpn")
+            lines = (ssh_stdout.readlines())
+
+            #find the process listening on port 7002, which is server, and kills it
+
+            for line in lines:
+                if line.count("7010") == 1:
+                    line = line.split(" ")
+                    for i in line:
+                        if (i.count("/python") == 1):
+                            pid = i.split("/")[0]
+                try:
+                    ssh.exec_command("kill -9 " + pid)
+                except:
+                    pass
+                if line.count(":2333") == 1 :
+                    line = line.split(" ")
+                    for i in line:
+                        if(i.count("/python") == 1):
+                            pid = i.split("/")[0]
+            try:
+                ssh.exec_command("kill -9 " + pid)
+            except:
+                pass
 
 if __name__=="__main__":
 
     
     pull()
+
     #combine()
-    #kill_server()
+    kill_server()
     #three()
     #clone()
     #clear_log()
+    #start_sdfs()
     #start_server()
+    #kill_sdfs()

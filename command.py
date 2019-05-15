@@ -5,5 +5,5 @@ if __name__ == "__main__":
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     host_name = socket.gethostname()
     host_ip = socket.gethostbyname(host_name)
-    sock.connect((host_ip,7003))
+    sock.connect((host_ip,10003))
     sock.send(command)

@@ -2,7 +2,7 @@ import socket
 import json
 import threading
 import random
-from peer4 import Peer
+from introducer4 import introducer
 
 class Nimbus:
     def __init__(self, membership_list):
@@ -240,17 +240,19 @@ class Nimbus:
                 if mem not in list_new:
                     failed_mems.append(mem)
             list_old = list_new
-            if len(failed_mems) > 1:
-                self.recover_failed_nodes(failed_mems)
-                failed_mems = []
+            if 'fa18-cs425-g26-02.cs.illinois.edu' not in failed_mems:
+                continue
+            print('detected nimbus failure, standby master comes out now')
+            failed_mems = failed_mems[-2:]
+            #print('failed: {0}'.format(failed_mems))
+            self.recover_failed_nodes(failed_mems)
+            failed_mems = []
     
     def recover_failed_nodes(self, failed_mems):
         #print('failed mems:{0}'.format(failed_mems))
         infected_app_nos = []
         addr_infected_apps = {} # ip: [app_no1, app_no2, ...]
         for failed_mem in failed_mems:
-            #if failed_mem == 'fa18-cs425-g26-02.cs.illinois.edu': # nimbus failed
-            #    print('detected nimbus failure, standby master comes out now')
             addr_infected_apps.pop(failed_mem, None)
             #print('app nos dict to be processed: {0}'.format(self.addr_bolt_dict))
             for app_no in self.addr_bolt_dict:
@@ -294,7 +296,7 @@ class Nimbus:
             self.client_addr.pop(app_no, None)
             
 if __name__ == '__main__':
-    host_name = socket.gethostname()
-    p = Peer(host_name)
-    p.start()
-    nimbus = Nimbus(p.member_ship_list)
+    intro = introducer()
+    threading.Thread(target=intro.message_list_maintainer).start()
+    threading.Thread(target=intro.listen).start()
+    nimbus = Nimbus(intro.membership_list)

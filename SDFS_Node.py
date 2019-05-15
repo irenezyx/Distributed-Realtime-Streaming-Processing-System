@@ -87,7 +87,7 @@ class SDFS_Node:
         first_chunk = first_chunk.split("jyuan18?yixinz6")[1]
         message[0] = first_chunk#change the first part of the message, take out the instruction
         operation = instruction["op"]
-        print("operation is:" + operation)
+        #print("operation is:" + operation)
         if operation == "put":
             self.put(instruction,message)
         elif operation == "get":
@@ -102,6 +102,36 @@ class SDFS_Node:
             self.receive_copy(instruction,message)
         elif operation == "change":
             self.change(instruction)
+        elif operation == "append":
+            #logging.info("appending to a file")
+            self.append(instruction,message)
+
+    def append(self,instruction,file):
+        instruction["ttl"] -= 1
+
+        sdfs_filename = instruction["s"]
+        self.file_to_node[sdfs_filename] = instruction["ips"]
+        #threading.Thread(target=self.spread, args=(instruction, file)).start()
+
+        if sdfs_filename in self.file_dict:
+            if len(self.file_dict[sdfs_filename]) < 5:
+                self.file_update(sdfs_filename, instruction, file)
+            else:  # deletion of old file
+
+                self.file_update(sdfs_filename, instruction, file)
+                # starts removing the oldest version
+
+                obsolete_version = self.file_dict[sdfs_filename].pop(0)
+
+                file_to_delete = sdfs_filename + "-" + str(obsolete_version)
+                if os.path.isfile(file_to_delete):
+                    os.remove(file_to_delete)
+                else:
+                    print("There is no file: " + file_to_delete)
+        else:
+
+            self.file_update(sdfs_filename, instruction, file)
+        #self.reply_ack(instruction)
 
     # make a socket connected to master
     def master_socket(self):
@@ -251,6 +281,7 @@ class SDFS_Node:
         sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         sock.connect((self.membership_manager.member_ship_list[0].split("#")[0],9999))
         ins = json.dumps({"seq":instruction["seq"], "op": "ack"})
+        #print(ins)
         sock.send(ins.encode())
         sock.close()
 
@@ -295,7 +326,30 @@ class SDFS_Node:
         sum = 0
         for c in file:
             sum+=len(c)
+        logging.info("saving file")
         file_writer = open(sdfs_filename, "w")
+        for chunk in itertools.islice(file, 0, max(len(file) - 2, 0)):
+            file_writer.write(chunk)
+        second_last = ""
+        if len(file) > 1:
+            second_last = file[-2]
+        file_writer.write((second_last + file[-1]).split("jyuan18?yixinz6")[0])
+    def file_update(self,sdfs_filename,instruction, file):#simply saving this as newest version to file
+
+        if sdfs_filename not in self.file_dict:# not already exist:initialize
+            self.file_dict[sdfs_filename] = [0]
+        new_version_num = self.file_dict[sdfs_filename][-1]
+
+        if self.file_dict[sdfs_filename][0] == 0:#if this time initialization happened
+            self.file_dict[sdfs_filename].pop(0)
+
+        #self.file_dict[sdfs_filename].append(new_version_num)
+        sdfs_filename = sdfs_filename + "-" + str(new_version_num)
+        sum = 0
+        for c in file:
+            sum+=len(c)
+        logging.info("updating file")
+        file_writer = open(sdfs_filename, "a+")
         for chunk in itertools.islice(file, 0, max(len(file) - 2, 0)):
             file_writer.write(chunk)
         second_last = ""
